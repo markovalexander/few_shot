@@ -107,21 +107,21 @@ def copy_grads(models, replicas, models2replicas, device):
             p.grad = r_p.grad.to(device)
 
 
-def meta_gradient_ens_step_mgpu(models: List[Module],
-                                optimisers: List[Optimizer],
-                                loss_fn: Callable,
-                                x: torch.Tensor,
-                                y: torch.Tensor,
-                                n_shot: int,
-                                k_way: int,
-                                q_queries: int,
-                                order: int,
-                                pred_mode: str,
-                                inner_train_steps: int,
-                                inner_lr: float,
-                                train: bool,
-                                model_params: List,
-                                device: Union[str, torch.device]):
+def meta_gradient_ens_step_mgpu_meanloss(models: List[Module],
+                                        optimisers: List[Optimizer],
+                                        loss_fn: Callable,
+                                        x: torch.Tensor,
+                                        y: torch.Tensor,
+                                        n_shot: int,
+                                        k_way: int,
+                                        q_queries: int,
+                                        order: int,
+                                        pred_mode: str,
+                                        inner_train_steps: int,
+                                        inner_lr: float,
+                                        train: bool,
+                                        model_params: List,
+                                        device: Union[str, torch.device]):
 
     data_shape = x.shape[2:]
     create_graph = (True if order == 2 else False) and train
