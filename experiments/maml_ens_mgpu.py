@@ -10,7 +10,9 @@ sys.path.append('..')
 
 from few_shot.datasets import OmniglotDataset, MiniImageNet
 from few_shot.core import NShotTaskSampler, create_nshot_task_label, EvaluateFewShot
-from few_shot.maml_ens_mgpu import meta_gradient_ens_step_mgpu
+from few_shot.maml_ens_mgpu import meta_gradient_ens_step_mgpu_2order, \
+    meta_gradient_ens_step_mgpu_1order
+from few_shot.maml_mean_loss import meta_gradient_ens_step_mgpu_meanloss
 from few_shot.models import FewShotClassifier
 from few_shot.train import fit
 from few_shot.callbacks import *
@@ -37,7 +39,8 @@ parser.add_argument('--inner-val-steps', default=3, type=int)
 parser.add_argument('--inner-lr', default=0.4, type=float)
 parser.add_argument('--meta-lr', default=0.001, type=float)
 parser.add_argument('--meta-batch-size', default=32, type=int)
-parser.add_argument('--order', default=1, type=int)
+parser.add_argument('--order', default=1, type=int,
+                    help="1, 2 or 0 (0 for mean losses)")
 parser.add_argument('--epochs', default=50, type=int)
 parser.add_argument('--epoch-len', default=100, type=int)
 parser.add_argument('--eval-batches', default=20, type=int)
@@ -92,7 +95,13 @@ meta_optimisers = [torch.optim.Adam(meta_model.parameters(), lr=args.meta_lr)
                    for meta_model in meta_models]
 
 
-loss_fn = F.nll_loss
+loss_fn = F.nll_loss if args.order > 0 else F.cross_entropy
+if args.order == 2:
+    fit_fn = meta_gradient_ens_step_mgpu_2order
+elif args.order == 1:
+    fit_fn = meta_gradient_ens_step_mgpu_1order
+else:
+    fit_fn = meta_gradient_ens_step_mgpu_meanloss
 
 
 def prepare_meta_batch(n, k, q, meta_batch_size):
@@ -117,7 +126,7 @@ ReduceLRCallback = CallbackList(ReduceLRCallback)
 hash = ''.join([chr(random.randint(97, 122)) for _ in range(3)])
 callbacks = [
     EvaluateFewShot(
-        eval_fn=meta_gradient_ens_step_mgpu,
+        eval_fn=fit_fn,
         num_tasks=args.eval_batches,
         n_shot=args.n,
         k_way=args.k,
@@ -152,7 +161,7 @@ fit(
     prepare_batch=prepare_meta_batch(args.n, args.k, args.q, args.meta_batch_size),
     callbacks=callbacks,
     metrics=['categorical_accuracy'],
-    fit_function=meta_gradient_ens_step_mgpu,
+    fit_function=fit_fn,
     fit_function_kwargs={'n_shot': args.n, 'k_way': args.k, 'q_queries': args.q,
                          'train': True, 'pred_mode': args.pred_mode,
                          'order': args.order, 'device': device,
