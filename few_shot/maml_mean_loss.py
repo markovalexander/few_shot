@@ -202,7 +202,7 @@ def meta_gradient_ens_step_mgpu_meanloss(models: List[Module],
 
                 n_models = len(models)
                 for task_pred in task_predictions:
-                    loss = loss_fn(task_pred, y.unsqueeze(0).repeat(n_models, 1).permute(0, 2, 1), reduction='None').mean()
+                    loss = loss_fn(torch.stack(task_pred, dim=0).permute(0, 2, 1), y.unsqueeze(0).repeat(n_models, 1), reduction='mean').mean()
                     preds_mgpu.append(pred_fn(task_pred, mode=pred_mode))
                     losses_mgpu.append(loss)
 
@@ -220,7 +220,7 @@ def meta_gradient_ens_step_mgpu_meanloss(models: List[Module],
                             models_task_losses.append(task_loss)
                             models_task_preds.append(task_pred)
 
-                if order == 2:
+                if True:
                     for model in models:
                         model.train()
 
