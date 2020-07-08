@@ -132,6 +132,8 @@ class DefaultCallback(Callback):
         for metric in self.params['metrics']:
             self.metrics += [metric + f'_{i}' for i in range(self.params['n_models'])]
 
+        self.metrics += ['logprobs_loss'] + ['logprobs_' + metric for metric in self.params['metrics']]
+
     def on_batch_end(self, batch, logs=None):
         logs = logs or {}
         batch_size = logs.get('size', 1) or 1

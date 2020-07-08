@@ -13,6 +13,7 @@ import numpy as np
 
 from few_shot.callbacks import DefaultCallback, ProgressBarLogger, CallbackList, Callback
 from few_shot.metrics import NAMED_METRICS
+from experiments.maml_ens_mgpu import logmeanexp_preds
 
 
 def gradient_step(model: Module, optimiser: Optimizer, loss_fn: Callable, x: torch.Tensor, y: torch.Tensor, **kwargs):
@@ -36,7 +37,7 @@ def gradient_step(model: Module, optimiser: Optimizer, loss_fn: Callable, x: tor
 
 
 def batch_metrics(model: Module, y_pred: torch.Tensor, y: torch.Tensor, metrics: List[Union[str, Callable]],
-                  batch_logs: dict):
+                  batch_logs: dict, prefix: str = None):
     """Calculates metrics for the current training batch
 
     # Arguments
@@ -52,7 +53,8 @@ def batch_metrics(model: Module, y_pred: torch.Tensor, y: torch.Tensor, metrics:
         model.eval()
     for m in metrics:
         if isinstance(m, str):
-            batch_logs[m] = NAMED_METRICS[m](y, y_pred)
+            key = m if prefix is None else f'{prefix}_' + m
+            batch_logs[key] = NAMED_METRICS[m](y, y_pred)
         else:
             # Assume metric is a callable function
             batch_logs = m(y, y_pred)
@@ -89,6 +91,11 @@ def fit(model: Union[Module, List[Module]], optimiser: Optimizer, loss_fn: Calla
     num_batches = len(dataloader)
     batch_size = dataloader.batch_size
 
+    fit_function_kwargs_logs = dict(fit_function_kwargs)
+
+    fit_function_kwargs_logs['trian'] = False
+    fit_function_kwargs_logs['pred_fn'] = logmeanexp_preds
+
     callbacks = CallbackList([DefaultCallback(), ] + (callbacks or []) + [ProgressBarLogger(), ])
     callbacks.set_model(model)
     callbacks.set_params({
@@ -122,6 +129,11 @@ def fit(model: Union[Module, List[Module]], optimiser: Optimizer, loss_fn: Calla
 
             # Loops through all metrics
             batch_logs = batch_metrics(model, y_pred, y, metrics, batch_logs)
+
+            loss_logprobs, y_pred_logprobs, *_ = fit_function(model, optimiser, loss_fn, x, y, **fit_function_kwargs_logs)
+            batch_logs['logprobs_loss'] = loss_logprobs.item()
+
+            batch_logs = batch_metrics(model, y_pred, y, metrics, batch_logs, 'logprobs')
 
             if len(base_logs) > 0:
                 models_losses = base_logs[0]

@@ -174,7 +174,7 @@ callbacks = [
         q_queries=args.q,
         taskloader=evaluation_taskloader,
         prepare_batch=prepare_meta_batch(args.n, args.k, args.q, args.meta_batch_size),
-        prefix="logprobs",
+        prefix="val_logprobs_",
         # MAML kwargs
         inner_train_steps=args.inner_val_steps,
         inner_lr=args.inner_lr,
