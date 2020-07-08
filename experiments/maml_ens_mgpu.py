@@ -166,6 +166,24 @@ callbacks = [
         model_params=model_params,
         pred_fn=pred_fn
     ),
+    EvaluateFewShot(
+        eval_fn=fit_fn,
+        num_tasks=args.eval_batches,
+        n_shot=args.n,
+        k_way=args.k,
+        q_queries=args.q,
+        taskloader=evaluation_taskloader,
+        prepare_batch=prepare_meta_batch(args.n, args.k, args.q, args.meta_batch_size),
+        prefix="logprobs",
+        # MAML kwargs
+        inner_train_steps=args.inner_val_steps,
+        inner_lr=args.inner_lr,
+        device=device,
+        order=args.order,
+        pred_mode=args.pred_mode,
+        model_params=model_params,
+        pred_fn=logmeanexp_preds
+    ),
     EnsembleCheckpoint(
         filepath=PATH + f'/models/maml_ens/mgpu_{param_str}.pth',
         monitor=f'val_{args.n}-shot_{args.k}-way_acc',
