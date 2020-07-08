@@ -337,8 +337,8 @@ def meta_gradient_ens_step_mgpu_1order(models: List[Module],
     def _worker(i, models, x, device):
 
         for model in models:
-            for p in model.parameters():
-                p.grad = 0
+            o = torch.optim.SGD(model.parameters(), lr=1)
+            o.zero_grad()
 
         losses_mgpu = []
         preds_mgpu = []
@@ -386,7 +386,6 @@ def meta_gradient_ens_step_mgpu_1order(models: List[Module],
 
                     with lock:
                         task_predictions = gather_predictions(predictions, i)
-
                     y_pred = pred_fn(task_predictions[0], mode=pred_mode)
                     loss = loss_fn(y_pred, y)
                     loss.backward(retain_graph=True)
@@ -462,7 +461,6 @@ def meta_gradient_ens_step_mgpu_1order(models: List[Module],
 
     meta_batch_loss = meta_batch_losses[0]
     task_predictions = task_predictions_mgpu[0]
-
     models_losses = models_losses[0]
     models_predictions = models_predictions[0]
     return meta_batch_loss / len(
