@@ -272,4 +272,4 @@ def meta_gradient_ens_step_mgpu_meanloss(models: List[Module],
 
     models_losses = models_losses[0]
     models_predictions = models_predictions[0]
-    return meta_batch_loss / len(meta_batch_losses), task_predictions, models_losses, models_predictions
+    return meta_batch_loss, task_predictions, models_losses, models_predictions
