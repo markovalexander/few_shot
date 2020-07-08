@@ -163,7 +163,6 @@ callbacks = [
         inner_lr=args.inner_lr,
         device=device,
         order=args.order,
-        pred_mode=args.pred_mode,
         model_params=model_params,
         pred_fn=pred_fn
     ),
@@ -181,7 +180,6 @@ callbacks = [
         inner_lr=args.inner_lr,
         device=device,
         order=args.order,
-        pred_mode=args.pred_mode,
         model_params=model_params,
         pred_fn=logmeanexp_preds
     ),
