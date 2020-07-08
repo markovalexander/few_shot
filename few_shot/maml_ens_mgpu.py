@@ -343,6 +343,7 @@ def meta_gradient_ens_step_mgpu_1order(models: List[Module],
         losses_mgpu = []
         preds_mgpu = []
         named_grads = {}
+        task_predictions_gathered = []
         try:
             with torch.cuda.device(device):
                 for meta_batch in x:
@@ -387,6 +388,7 @@ def meta_gradient_ens_step_mgpu_1order(models: List[Module],
                     with lock:
                         task_predictions = gather_predictions(predictions, i)
                     y_pred = pred_fn(task_predictions[0], mode=pred_mode)
+                    task_predictions_gathered.append(task_predictions[0])
                     loss = loss_fn(y_pred, y)
                     loss.backward(retain_graph=True)
 
@@ -408,7 +410,7 @@ def meta_gradient_ens_step_mgpu_1order(models: List[Module],
                         for model_idx in range(total_models):
                             task_loss = []
                             task_pred = []
-                            for task in task_predictions:
+                            for task in task_predictions_gathered:
                                 loss = loss_fn(
                                     F.log_softmax(task[model_idx], dim=-1),
                                     y).item()
