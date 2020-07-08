@@ -129,7 +129,8 @@ class DefaultCallback(Callback):
         self.totals = {}
         self.metrics = ['loss'] + self.params['metrics']
         self.metrics += [f'loss_{i}' for i in range(self.params['n_models'])]
-        self.metrics += [self.params['metrics'] + f'_{i}' for i in range(self.params['n_models'])]
+        for metric in self.params['metrics']:
+            self.metrics += [metric + f'_{i}' for i in range(self.params['n_models'])]
 
     def on_batch_end(self, batch, logs=None):
         logs = logs or {}
