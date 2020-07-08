@@ -10,10 +10,10 @@ from typing import Callable, List, Union
 from numpy import mean as nmean
 from numpy import savez
 import numpy as np
+from torch.nn.functional import log_softmax
 
 from few_shot.callbacks import DefaultCallback, ProgressBarLogger, CallbackList, Callback
 from few_shot.metrics import NAMED_METRICS
-from experiments.maml_ens_mgpu import logmeanexp_preds
 
 
 def gradient_step(model: Module, optimiser: Optimizer, loss_fn: Callable, x: torch.Tensor, y: torch.Tensor, **kwargs):
@@ -34,6 +34,14 @@ def gradient_step(model: Module, optimiser: Optimizer, loss_fn: Callable, x: tor
     optimiser.step()
 
     return loss, y_pred
+
+
+def logmeanexp_preds(output):
+    output = torch.stack(output, dim=0)
+    n_models = len(output)
+    output = log_softmax(output, dim=-1)
+    output = torch.logsumexp(output, dim=0) - np.log(n_models)  # [k*n, n]
+    return output
 
 
 def batch_metrics(model: Module, y_pred: torch.Tensor, y: torch.Tensor, metrics: List[Union[str, Callable]],
