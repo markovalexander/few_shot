@@ -162,6 +162,7 @@ fit(
     callbacks=callbacks,
     metrics=['categorical_accuracy'],
     fit_function=fit_fn,
+    n_models=args.n_models,
     fit_function_kwargs={'n_shot': args.n, 'k_way': args.k, 'q_queries': args.q,
                          'train': True, 'pred_mode': args.pred_mode,
                          'order': args.order, 'device': device,

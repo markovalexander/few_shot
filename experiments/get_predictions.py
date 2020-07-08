@@ -46,7 +46,7 @@ def parse_name(filename):
 models = []
 for exp in names:
     params = parse_name(exp)
-    if params['pred_mode'] != 'logprobs':
+    if params['pred_mode'] != 'mean' and params['order'] != 2:
         continue
     else:
         exp_models = []
@@ -71,7 +71,7 @@ def run_one(names):
         meta_batch_size = 2
         n_models = len(names)
         eval_batches = 80
-        pred_mode = 'logprobs'
+        pred_mode = 'mean'
         order = 2
         epochs = 1
         inner_train_steps = 5
