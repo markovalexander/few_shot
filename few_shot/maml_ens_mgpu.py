@@ -396,7 +396,7 @@ def meta_gradient_ens_step_mgpu_1order(models: List[Module],
 
                     for idx, model in enumerate(models):
                         gradients = torch.autograd.grad(loss, fast_weights_dict[idx].values(),
-                                                        create_graph=create_graph)
+                                                        create_graph=create_graph, retain_graph=True)
                         for p, grad in zip(model.parameters(), gradients):
                             p.grad += grad
 

@@ -170,6 +170,16 @@ class EvaluateFewShot(Callback):
                 logs[self.metric_name + "_{}".format(i)] = per_model_stats[self.metric_name + "_{}".format(i)] / seen
 
 
+def to_numpy(preds):  # [n_models, n_tasks, n_objects, n_classes]
+    a = []
+    for model_pred in preds:
+        # model_preds []
+        task_pred = torch.stack(model_pred)
+        pred = task_pred.cpu().detach().numpy()
+        a.append(pred)
+    return np.array(a)
+
+
 class SaveFewShot(Callback):
     """Evaluate a network on  an n-shot, k-way classification tasks after every epoch.
 
@@ -230,7 +240,7 @@ class SaveFewShot(Callback):
                 **self.kwargs
             )
             models_preds = base_logs[1]
-            test_preds.append(models_preds)
+            test_preds.append(to_numpy(models_preds))
 
         name = logs['name']
         train_batches = logs['batches_train']

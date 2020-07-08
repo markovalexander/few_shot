@@ -28,7 +28,7 @@ num_input_channels = 3
 
 names = os.listdir('../logs/maml_ens/')
 
-model_names = sorted(os.listdir('maml_ens/'))
+model_names = sorted(os.listdir('../models/maml_ens/'))
 
 
 def parse_name(filename):
@@ -62,6 +62,8 @@ for exp in names:
 
 def run_one(names):
     class args:
+        meta_lr = 1e-3
+        dataset = "miniImageNet"
         epoch_len = 800
         n = 5
         k = 5
@@ -103,7 +105,7 @@ def run_one(names):
                        for meta_model in meta_models]
 
     for i, (model, name) in enumerate(zip(meta_models, names)):
-        model.load_state_dict(torch.load(name + f'_{i}.pth'))
+        model.load_state_dict(torch.load("../models/maml_ens/" + name))
 
     loss_fn = F.nll_loss if args.order > 0 else F.cross_entropy
 
@@ -145,11 +147,10 @@ def run_one(names):
             device=device,
             order=args.order,
             pred_mode=args.pred_mode,
-            model_params=model_params,
-            name=names[0]
+            model_params=model_params
         )
     ]
-
+    print(names[0][:-7])
     save_res(
         meta_models,
         meta_optimisers,
@@ -160,16 +161,20 @@ def run_one(names):
         callbacks=callbacks,
         metrics=['categorical_accuracy'],
         fit_function=fit_fn,
+        name=names[0][:-7],
         fit_function_kwargs={'n_shot': args.n, 'k_way': args.k, 'q_queries': args.q,
                              'train': False, 'pred_mode': args.pred_mode,
                              'order': args.order, 'device': device,
                              'inner_train_steps': args.inner_train_steps,
-                             'inner_lr': args.inner_lr, 'model_params': model_params,
-                             'name': names[0]},
+                             'inner_lr': args.inner_lr, 'model_params': model_params},
     )
 
 
 def main():
-    for i, names in enumerate(model_names):
-        print(f'Doing {i+1} ensemble of {len(model_names)}...')
+    for i, names in enumerate(models):
+        print(names)
+        print(f'Doing {i+1} ensemble of {len(models)}...')
         run_one(names)
+
+if __name__ == "__main__":
+    main()
