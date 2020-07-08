@@ -9,6 +9,7 @@ from torch.utils.data import DataLoader
 from typing import Callable, List, Union
 from numpy import mean as nmean
 from numpy import savez
+import numpy as np
 
 from few_shot.callbacks import DefaultCallback, ProgressBarLogger, CallbackList, Callback
 from few_shot.metrics import NAMED_METRICS
@@ -151,7 +152,7 @@ def to_numpy(preds):  # [n_models, n_tasks, n_objects, n_classes]
     return np.array(a)
 
 
-def save_preds(model: Union[Module, List[Module]], optimiser: Optimizer, loss_fn: Callable, epochs: int,
+def save_res(model: Union[Module, List[Module]], optimiser: Optimizer, loss_fn: Callable, epochs: int,
                dataloader: DataLoader,
                prepare_batch: Callable, metrics: List[Union[str, Callable]] = None, callbacks: List[Callback] = None,
                verbose: bool = True, fit_function: Callable = gradient_step, fit_function_kwargs: dict = {}, name=None):
