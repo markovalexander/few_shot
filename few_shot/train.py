@@ -62,7 +62,7 @@ def batch_metrics(model: Module, y_pred: torch.Tensor, y: torch.Tensor, metrics:
 
 def fit(model: Union[Module, List[Module]], optimiser: Optimizer, loss_fn: Callable, epochs: int, dataloader: DataLoader,
         prepare_batch: Callable, metrics: List[Union[str, Callable]] = None, callbacks: List[Callback] = None,
-        verbose: bool =True, fit_function: Callable = gradient_step, fit_function_kwargs: dict = {}):
+        verbose: bool = True, fit_function: Callable = gradient_step, n_models: int = 1, fit_function_kwargs: dict = {}):
     """Function to abstract away training loop.
 
     The benefit of this function is that allows training scripts to be much more readable and allows for easy re-use of
@@ -98,7 +98,8 @@ def fit(model: Union[Module, List[Module]], optimiser: Optimizer, loss_fn: Calla
         'metrics': (metrics or []),
         'prepare_batch': prepare_batch,
         'loss_fn': loss_fn,
-        'optimiser': optimiser
+        'optimiser': optimiser,
+        'n_models': n_models
     })
 
     if verbose:
