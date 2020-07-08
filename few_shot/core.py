@@ -169,8 +169,8 @@ class EvaluateFewShot(Callback):
                 logs[self.prefix + 'loss_{}'.format(i)] = per_model_stats['loss_{}'.format(i)] / seen
                 logs[self.metric_name + "_{}".format(i)] = per_model_stats[self.metric_name + "_{}".format(i)] / seen
 
-'''
-class EvaluateFewShotEns(Callback):
+
+class SaveFewShot(Callback):
     """Evaluate a network on  an n-shot, k-way classification tasks after every epoch.
 
     # Arguments
@@ -183,7 +183,7 @@ class EvaluateFewShotEns(Callback):
         task_loader: Instance of NShotWrapper class
         prepare_batch: function. The preprocessing function to apply to samples from the dataset.
         prefix: str. Prefix to identify dataset.
-    """"
+    """
 
     def __init__(self,
                  eval_fn: Callable,
@@ -195,7 +195,7 @@ class EvaluateFewShotEns(Callback):
                  prepare_batch: Callable,
                  prefix: str = 'val_',
                  **kwargs):
-        super(EvaluateFewShotEns, self).__init__()
+        super().__init__()
         self.eval_fn = eval_fn
         self.num_tasks = num_tasks
         self.n_shot = n_shot
@@ -213,12 +213,11 @@ class EvaluateFewShotEns(Callback):
 
     def on_epoch_end(self, epoch, logs=None):
         logs = logs or {}
-        seen = 0
-        totals = {'loss': 0, self.metric_name: 0}
+        test_preds = []
         for batch_index, batch in enumerate(self.taskloader):
             x, y = self.prepare_batch(batch)
 
-            loss, y_pred = self.eval_fn(
+            loss, y_pred, *base_logs = self.eval_fn(
                 self.model,
                 self.optimiser,
                 self.loss_fn,
@@ -230,15 +229,17 @@ class EvaluateFewShotEns(Callback):
                 train=False,
                 **self.kwargs
             )
+            models_preds = base_logs[1]
+            test_preds.append(models_preds)
 
-            seen += y_pred.shape[0]
+        name = logs['name']
+        train_batches = logs['batches_train']
+        test_batches = test_preds
 
-            totals['loss'] += loss.item() * y_pred.shape[0]
-            totals[self.metric_name] += categorical_accuracy(y, y_pred) * y_pred.shape[0]
+        np.savez('../predictions/' + name + '_train', *train_batches)
+        np.savez('../predictions/' + name +'_test', *test_batches)
 
-        logs[self.prefix + 'loss'] = totals['loss'] / seen
-        logs[self.metric_name] = totals[self.metric_name] / seen
-"""
+'''
 
 def prepare_nshot_task(n: int, k: int, q: int) -> Callable:
     """Typical n-shot task preprocessing.
