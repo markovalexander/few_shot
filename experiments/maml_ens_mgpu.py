@@ -104,6 +104,30 @@ else:
     fit_fn = meta_gradient_ens_step_mgpu_meanloss
 
 
+def mean_preds(output):
+    output = torch.stack(output, dim=0)
+    output = F.log_softmax(output, dim=-1)
+    output = torch.mean(output, dim=0)
+    return output
+
+
+def logmeanexp_preds(output):
+    output = torch.stack(output, dim=0)
+    n_models = len(output)
+    output = F.log_softmax(output, dim=-1)
+    output = torch.logsumexp(output, dim=0) - np.log(n_models)  # [k*n, n]
+    return output
+
+
+# TODO: add different pred_functions for train and test
+if args.pred_mode == "mean":
+    pred_fn = mean_preds
+elif args.pred_mode == "logprobs":
+    pred_fn = logmeanexp_preds
+else:
+    raise ValueError("This pred-mode is not supported yet.")
+
+
 def prepare_meta_batch(n, k, q, meta_batch_size):
     def prepare_meta_batch_(batch):
         x, y = batch
@@ -139,7 +163,8 @@ callbacks = [
         device=device,
         order=args.order,
         pred_mode=args.pred_mode,
-        model_params=model_params
+        model_params=model_params,
+        pred_fn=pred_fn
     ),
     EnsembleCheckpoint(
         filepath=PATH + f'/models/maml_ens/mgpu_{param_str}.pth',
@@ -163,8 +188,8 @@ fit(
     metrics=['categorical_accuracy'],
     fit_function=fit_fn,
     fit_function_kwargs={'n_shot': args.n, 'k_way': args.k, 'q_queries': args.q,
-                         'train': True, 'pred_mode': args.pred_mode,
-                         'order': args.order, 'device': device,
+                         'train': True, 'order': args.order, 'device': device,
                          'inner_train_steps': args.inner_train_steps,
-                         'inner_lr': args.inner_lr, 'model_params': model_params},
+                         'inner_lr': args.inner_lr, 'model_params': model_params,
+                         'pred_fn': pred_fn},
 )

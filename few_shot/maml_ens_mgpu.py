@@ -54,20 +54,20 @@ def replace_grad(parameter_gradients, parameter_name):
 
     return replace_grad_
 
-
-def pred_fn(output, mode='mean'):
-    output = torch.stack(output, dim=0)
-    if mode == 'mean':
-        output = F.log_softmax(output, dim=-1)
-        output = torch.mean(output, dim=0)
-        return output
-    elif mode == 'logprobs':
-        n_models = len(output)
-        output = F.log_softmax(output, dim=-1)
-        output = torch.logsumexp(output, dim=0) - np.log(n_models)  # [k*n, n]
-        return output
-    else:
-        raise ValueError("invalid 'pred_mode' argument")
+#
+# def pred_fn(output, mode='mean'):
+#     output = torch.stack(output, dim=0)
+#     if mode == 'mean':
+#         output = F.log_softmax(output, dim=-1)
+#         output = torch.mean(output, dim=0)
+#         return output
+#     elif mode == 'logprobs':
+#         n_models = len(output)
+#         output = F.log_softmax(output, dim=-1)
+#         output = torch.logsumexp(output, dim=0) - np.log(n_models)  # [k*n, n]
+#         return output
+#     else:
+#         raise ValueError("invalid 'pred_mode' argument")
 
 
 def get_grads(ensemble):
@@ -118,7 +118,7 @@ def meta_gradient_ens_step_mgpu_2order(models: List[Module],
                                         k_way: int,
                                         q_queries: int,
                                         order: int,
-                                        pred_mode: str,
+                                        pred_fn: Callable,
                                         inner_train_steps: int,
                                         inner_lr: float,
                                         train: bool,
@@ -207,7 +207,7 @@ def meta_gradient_ens_step_mgpu_2order(models: List[Module],
                     task_predictions = gather_predictions(predictions, i)
 
                 for task_pred in task_predictions:
-                    y_pred = pred_fn(task_pred, mode=pred_mode)
+                    y_pred = pred_fn(task_pred)
                     loss = loss_fn(y_pred, y)
                     loss.backward(retain_graph=True)
                     preds_mgpu.append(y_pred)
@@ -295,7 +295,7 @@ def meta_gradient_ens_step_mgpu_1order(models: List[Module],
                                        k_way: int,
                                        q_queries: int,
                                        order: int,
-                                       pred_mode: str,
+                                       pred_fn: str,
                                        inner_train_steps: int,
                                        inner_lr: float,
                                        train: bool,
@@ -386,7 +386,9 @@ def meta_gradient_ens_step_mgpu_1order(models: List[Module],
 
                     with lock:
                         task_predictions = gather_predictions(predictions, i)
-                    y_pred = pred_fn(task_predictions[0], mode=pred_mode)
+
+                    # TODO: does not work
+                    y_pred = pred_fn(task_predictions[0])
                     task_predictions_gathered.append(task_predictions[0])
                     loss = loss_fn(y_pred, y)
                     loss.backward(retain_graph=True)
