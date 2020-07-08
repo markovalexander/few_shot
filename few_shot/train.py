@@ -101,7 +101,7 @@ def fit(model: Union[Module, List[Module]], optimiser: Optimizer, loss_fn: Calla
 
     fit_function_kwargs_logs = dict(fit_function_kwargs)
 
-    fit_function_kwargs_logs['trian'] = False
+    fit_function_kwargs_logs['train'] = False
     fit_function_kwargs_logs['pred_fn'] = logmeanexp_preds
 
     callbacks = CallbackList([DefaultCallback(), ] + (callbacks or []) + [ProgressBarLogger(), ])
