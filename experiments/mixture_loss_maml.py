@@ -122,7 +122,7 @@ class MixtureLoss(nn.Module):
             True
         ]
         # Weights are inputs to softplus
-        self.weights = nn.Parameter(torch.FloatTensor(len(self.losses)))
+        self.weights = nn.Parameter(torch.DoubleTensor(len(self.losses)))
         self.weights.data.fill_(invsp(1. / len(self.losses)))
         # self.weights.data[0] = 1.0
         # self.weights.data[0] = 0.0
@@ -133,7 +133,7 @@ class MixtureLoss(nn.Module):
         return F.softplus(self.weights)
 
     def one_hot_encoding(self, tensor, n_classes):
-        ohe = torch.FloatTensor(tensor.size(0), n_classes).to(tensor.device)
+        ohe = torch.FloatTensor(tensor.size(0), n_classes).to(tensor.device).double()
         ohe.zero_()
         ohe.scatter_(1, tensor[:, None], 1)
         return ohe
