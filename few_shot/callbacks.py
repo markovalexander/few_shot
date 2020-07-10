@@ -133,6 +133,7 @@ class DefaultCallback(Callback):
             self.metrics += [metric + f'_{i}' for i in range(self.params['n_models'])]
 
         self.metrics += ['logprobs_loss'] + ['logprobs_' + metric for metric in self.params['metrics']]
+        self.metrics += ['logprobs_nll']
 
     def on_batch_end(self, batch, logs=None):
         logs = logs or {}
