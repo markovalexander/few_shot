@@ -140,7 +140,7 @@ def fit(model: Union[Module, List[Module]], optimiser: Optimizer, loss_fn: Calla
 
             loss_logprobs, y_pred_logprobs, *_ = fit_function(model, optimiser, loss_fn, x, y, **fit_function_kwargs_logs)
             batch_logs['logprobs_loss'] = loss_logprobs.item()
-            batch_logs['logprobs_nll'] = nll_loss(y_pred_logprobs.permute(0, 2, 1), y, reduction="mean").item()
+            batch_logs['logprobs_nll'] = nll_loss(y_pred_logprobs, y, reduction="mean").item()
 
             batch_logs = batch_metrics(model, y_pred, y, metrics, batch_logs, 'logprobs')
 
