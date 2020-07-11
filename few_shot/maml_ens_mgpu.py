@@ -5,7 +5,6 @@ from torch.nn import Module
 from typing import Dict, List, Callable, Union
 import torch.nn.functional as F
 import threading
-from torch.nn.parallel import scatter, gather, replicate
 import sys
 import traceback
 from collections import defaultdict
@@ -180,7 +179,7 @@ def meta_gradient_ens_step_mgpu_2order(models: List[Module],
                                 device)
                             logits = model.functional_forward(x_task_train,
                                                               fast_weights)
-                            loss = loss_fn(logits, y)
+                            loss = F.cross_entropy(logits, y)
                             gradients = torch.autograd.grad(loss,
                                                             fast_weights.values(),
                                                             create_graph=create_graph)
@@ -360,7 +359,7 @@ def meta_gradient_ens_step_mgpu_1order(models: List[Module],
                                 device)
                             logits = model.functional_forward(x_task_train,
                                                               fast_weights)
-                            loss = loss_fn(logits, y)
+                            loss = F.cross_entropy(logits, y)
                             gradients = torch.autograd.grad(loss,
                                                             fast_weights.values(),
                                                             create_graph=create_graph)

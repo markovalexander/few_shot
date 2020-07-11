@@ -174,7 +174,7 @@ def meta_gradient_ens_step_mgpu_meanloss(models: List[Module],
                                 device)
                             logits = model.functional_forward(x_task_train,
                                                               fast_weights)
-                            loss = loss_fn(logits, y)
+                            loss = F.cross_entropy(logits, y)
                             gradients = torch.autograd.grad(loss,
                                                             fast_weights.values(),
                                                             create_graph=create_graph)

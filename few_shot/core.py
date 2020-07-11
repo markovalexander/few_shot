@@ -107,6 +107,7 @@ class EvaluateFewShot(Callback):
                  q_queries: int,
                  taskloader: torch.utils.data.DataLoader,
                  prepare_batch: Callable,
+                 loss_fn: Callable,
                  prefix: str = 'val_',
                  **kwargs):
         super(EvaluateFewShot, self).__init__()
@@ -120,9 +121,10 @@ class EvaluateFewShot(Callback):
         self.prefix = prefix
         self.kwargs = kwargs
         self.metric_name = f'{self.prefix}{self.n_shot}-shot_{self.k_way}-way_acc'
+        self.loss_fn = loss_fn
 
     def on_train_begin(self, logs=None):
-        self.loss_fn = self.params['loss_fn']
+        # self.loss_fn = self.params['loss_fn']
         self.optimiser = self.params['optimiser']
 
     def on_epoch_end(self, epoch, logs=None):
