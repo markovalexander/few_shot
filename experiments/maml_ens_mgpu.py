@@ -18,6 +18,7 @@ from few_shot.train import fit
 from few_shot.callbacks import *
 from few_shot.utils import setup_dirs
 from config import PATH
+from few_shot.functions import get_pred_fn, logmeanexp_preds
 
 setup_dirs()
 assert torch.cuda.is_available()
@@ -44,8 +45,9 @@ parser.add_argument('--order', default=1, type=int,
 parser.add_argument('--epochs', default=50, type=int)
 parser.add_argument('--epoch-len', default=100, type=int)
 parser.add_argument('--eval-batches', default=20, type=int)
-parser.add_argument('--n_models', default=3, type=int)
-parser.add_argument('--pred_mode', default='mean', type=str)
+parser.add_argument('--n-models', default=3, type=int)
+parser.add_argument('--train-pred-mode', default='mean', type=str)
+parser.add_argument('--test-pred-mode', default='same', type=str)
 
 args = parser.parse_args()
 
@@ -104,29 +106,7 @@ else:
     fit_fn = meta_gradient_ens_step_mgpu_meanloss
 
 
-# TODO: make separate file for pred_fn
-def mean_preds(output):
-    output = torch.stack(output, dim=0)
-    output = F.log_softmax(output, dim=-1)
-    output = torch.mean(output, dim=0)
-    return output
-
-
-def logmeanexp_preds(output):
-    output = torch.stack(output, dim=0)
-    n_models = len(output)
-    output = F.log_softmax(output, dim=-1)
-    output = torch.logsumexp(output, dim=0) - np.log(n_models)  # [k*n, n]
-    return output
-
-
-# TODO: add different pred_functions for train and test
-if args.pred_mode == "mean":
-    pred_fn = mean_preds
-elif args.pred_mode == "logprobs":
-    pred_fn = logmeanexp_preds
-else:
-    raise ValueError("This pred-mode is not supported yet.")
+train_pred_fn, test_pred_fn = get_pred_fn(args)
 
 
 def prepare_meta_batch(n, k, q, meta_batch_size):
@@ -143,6 +123,7 @@ def prepare_meta_batch(n, k, q, meta_batch_size):
         return x, y
 
     return prepare_meta_batch_
+
 
 ReduceLRCallback = [ReduceLROnPlateau(patience=10, factor=0.5, monitor=f'val_loss', index=i)
                     for i in range(len(meta_optimisers))]
@@ -164,7 +145,7 @@ callbacks = [
         device=device,
         order=args.order,
         model_params=model_params,
-        pred_fn=pred_fn
+        pred_fn=test_pred_fn
     ),
     EvaluateFewShot(
         eval_fn=fit_fn,
@@ -209,5 +190,5 @@ fit(
                          'train': True, 'order': args.order, 'device': device,
                          'inner_train_steps': args.inner_train_steps,
                          'inner_lr': args.inner_lr, 'model_params': model_params,
-                         'pred_fn': pred_fn},
+                         'pred_fn': train_pred_fn},
 )

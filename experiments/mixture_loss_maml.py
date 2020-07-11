@@ -18,6 +18,7 @@ from few_shot.train import fit
 from few_shot.callbacks import *
 from few_shot.utils import setup_dirs
 from config import PATH
+from few_shot.functions import get_pred_fn, logmeanexp_preds, MixtureLoss
 
 setup_dirs()
 assert torch.cuda.is_available()
@@ -45,7 +46,8 @@ parser.add_argument('--epochs', default=50, type=int)
 parser.add_argument('--epoch-len', default=100, type=int)
 parser.add_argument('--eval-batches', default=20, type=int)
 parser.add_argument('--n-models', default=3, type=int)
-parser.add_argument('--pred-mode', default='mean', type=str)
+parser.add_argument('--train-pred-mode', default='mean', type=str)
+parser.add_argument('--test-pred-mode', default='same', type=str)
 
 args = parser.parse_args()
 
@@ -95,64 +97,6 @@ meta_optimisers = [torch.optim.Adam(meta_model.parameters(), lr=args.meta_lr)
                    for meta_model in meta_models]
 
 
-def invsp(x):
-    return np.log(np.exp(x) - 1)
-
-
-class MixtureLoss(nn.Module):
-    def __init__(self, n_way):
-        super().__init__()
-        self.n_way = n_way
-        self.losses = [
-            # torch.nn.MultiMarginLoss(margin=0.9, p=2),
-            torch.nn.MSELoss(),  # one-hot, softmax
-            torch.nn.CrossEntropyLoss(),
-            torch.nn.MultiLabelSoftMarginLoss(),  # one-hot, softmax
-        ]
-        self.onehot = [
-            # False,
-            True,
-            False,
-            True
-        ]
-        self.softmax = [
-            # False,
-            True,
-            False,
-            True
-        ]
-        # Weights are inputs to softplus
-        self.weights = nn.Parameter(torch.DoubleTensor(len(self.losses)))
-        self.weights.data.fill_(invsp(1. / len(self.losses)))
-        # self.weights.data[0] = 1.0
-        # self.weights.data[0] = 0.0
-        # self.weights.data[1] = 1.0
-        # self.weights.data[2] = 0.0
-
-    def get_weights(self):
-        return F.softplus(self.weights)
-
-    def one_hot_encoding(self, tensor, n_classes):
-        ohe = torch.FloatTensor(tensor.size(0), n_classes).to(tensor.device).double()
-        ohe.zero_()
-        ohe.scatter_(1, tensor[:, None], 1)
-        return ohe
-
-    def forward(self, y_pred, y_true):
-        oh = self.one_hot_encoding(y_true, self.n_way)
-        loss = 0.0
-        weights = self.get_weights()
-        for i in range(len(self.losses)):
-            pred = y_pred
-            if self.softmax[i]:
-                pred = F.softmax(y_pred, dim=1)
-            y = y_true
-            if self.onehot[i]:
-                y = oh
-            loss += weights[i] * self.losses[i](pred, y)
-        return loss
-
-
 loss_fn = MixtureLoss(args.n).to(device)
 if args.order == 2:
     fit_fn = meta_gradient_ens_step_mgpu_2order
@@ -161,30 +105,7 @@ elif args.order == 1:
 else:
     fit_fn = meta_gradient_ens_step_mgpu_meanloss
 
-
-# TODO: make separate file for pred_fn
-def mean_preds(output):
-    output = torch.stack(output, dim=0)
-    output = F.log_softmax(output, dim=-1)
-    output = torch.mean(output, dim=0)
-    return output
-
-
-def logmeanexp_preds(output):
-    output = torch.stack(output, dim=0)
-    n_models = len(output)
-    output = F.log_softmax(output, dim=-1)
-    output = torch.logsumexp(output, dim=0) - np.log(n_models)  # [k*n, n]
-    return output
-
-
-# TODO: add different pred_functions for train and test
-if args.pred_mode == "mean":
-    pred_fn = mean_preds
-elif args.pred_mode == "logprobs":
-    pred_fn = logmeanexp_preds
-else:
-    raise ValueError("This pred-mode is not supported yet.")
+train_pred_fn, test_pred_fn = get_pred_fn(args)
 
 
 def prepare_meta_batch(n, k, q, meta_batch_size):
@@ -201,6 +122,7 @@ def prepare_meta_batch(n, k, q, meta_batch_size):
         return x, y
 
     return prepare_meta_batch_
+
 
 ReduceLRCallback = [ReduceLROnPlateau(patience=10, factor=0.5, monitor=f'val_loss', index=i)
                     for i in range(len(meta_optimisers))]
@@ -222,7 +144,8 @@ callbacks = [
         device=device,
         order=args.order,
         model_params=model_params,
-        pred_fn=pred_fn
+        pred_fn=test_pred_fn,
+        loss_fn=loss_fn
     ),
     EvaluateFewShot(
         eval_fn=fit_fn,
@@ -239,7 +162,8 @@ callbacks = [
         device=device,
         order=args.order,
         model_params=model_params,
-        pred_fn=logmeanexp_preds
+        pred_fn=logmeanexp_preds,
+        loss_fn=F.nll_loss
     ),
     EnsembleCheckpoint(
         filepath=PATH + f'/models/maml_ens/mixture_{param_str}.pth',
@@ -267,5 +191,5 @@ fit(
                          'train': True, 'order': args.order, 'device': device,
                          'inner_train_steps': args.inner_train_steps,
                          'inner_lr': args.inner_lr, 'model_params': model_params,
-                         'pred_fn': pred_fn},
+                         'pred_fn': train_pred_fn},
 )
