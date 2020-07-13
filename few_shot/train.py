@@ -8,9 +8,9 @@ from torch.nn import Module
 from torch.utils.data import DataLoader
 from typing import Callable, List, Union
 from numpy import mean as nmean
-from numpy import savez
 import numpy as np
 from torch.nn.functional import log_softmax, nll_loss
+from collections import *
 
 from few_shot.callbacks import DefaultCallback, ProgressBarLogger, CallbackList, Callback
 from few_shot.metrics import NAMED_METRICS
@@ -138,10 +138,26 @@ def fit(model: Union[Module, List[Module]], optimiser: Optimizer, loss_fn: Calla
             # Loops through all metrics
             batch_logs = batch_metrics(model, y_pred, y, metrics, batch_logs)
 
-            loss_logprobs, y_pred_logprobs, *_ = fit_function(model, optimiser, loss_fn, x, y, **fit_function_kwargs_logs)
-            batch_logs['logprobs_loss'] = loss_logprobs.item()
-            batch_logs['logprobs_nll'] = nll_loss(y_pred_logprobs, y, reduction="mean").item()
+            models_preds = base_logs[1]  # [n_models, n_tasks, n_objects, n_classes]
+            task_preds = defaultdict(list)
+            for model_pred in models_preds:
+                for i, task in enumerate(model_pred):
+                    task_preds[i].append(task)
 
+            # task_preds : {task_idx : [model_1_pred, model_2_pred, ....] }
+            logprobs_pred = []
+            logprobs_loss = []
+            for task_idx, task_pred in task_preds.items():
+                y_pred = logmeanexp_preds(task_pred)
+                logprobs_pred.append(y_pred)
+
+            y_pred_logprobs = torch.stack(logprobs_pred)
+
+            with torch.no_grad():
+                loss_logprobs = loss_fn(y_pred_logprobs, y).item()
+
+            batch_logs['logprobs_loss'] = loss_logprobs
+            batch_logs['logprobs_nll'] = nll_loss(y_pred_logprobs, y, reduction="mean").item()
             batch_logs = batch_metrics(model, y_pred_logprobs, y, metrics, batch_logs, 'logprobs')
 
             if len(base_logs) > 0:
