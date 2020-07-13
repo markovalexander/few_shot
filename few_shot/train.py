@@ -148,11 +148,10 @@ def fit(model: Union[Module, List[Module]], optimiser: Optimizer, loss_fn: Calla
             logprobs_pred = []
             logprobs_loss = []
             for task_idx, task_pred in task_preds.items():
-                y_pred = logmeanexp_preds(task_pred)
-                logprobs_pred.append(y_pred)
+                y_pred_ = logmeanexp_preds(task_pred)
+                logprobs_pred.append(y_pred_)
 
-            y_pred_logprobs = torch.stack(logprobs_pred)
-
+            y_pred_logprobs = torch.cat(logprobs_pred)
             with torch.no_grad():
                 loss_logprobs = loss_fn(y_pred_logprobs, y).item()
 
