@@ -142,7 +142,7 @@ def fit(model: Union[Module, List[Module]], optimiser: Optimizer, loss_fn: Calla
             batch_logs['logprobs_loss'] = loss_logprobs.item()
             batch_logs['logprobs_nll'] = nll_loss(y_pred_logprobs, y, reduction="mean").item()
 
-            batch_logs = batch_metrics(model, y_pred, y, metrics, batch_logs, 'logprobs')
+            batch_logs = batch_metrics(model, y_pred_logprobs, y, metrics, batch_logs, 'logprobs')
 
             if len(base_logs) > 0:
                 models_losses = base_logs[0]
