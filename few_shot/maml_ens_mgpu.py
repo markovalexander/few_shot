@@ -154,7 +154,7 @@ def meta_gradient_ens_step_mgpu_2order(models: List[Module],
 
     models_losses = {}
     models_predictions = {}
-
+    support_losses = {}
     # grads = {}
 
     def _worker(i, models, x, device):
@@ -162,11 +162,11 @@ def meta_gradient_ens_step_mgpu_2order(models: List[Module],
         losses_mgpu = []
         preds_mgpu = []
         task_predictions = []
+        support_loss = []
 
         try:
             with torch.cuda.device(device):
                 for meta_batch in x:
-
                     x_task_train = meta_batch[:n_shot * k_way]
                     x_task_val = meta_batch[n_shot * k_way:]
 
@@ -189,6 +189,8 @@ def meta_gradient_ens_step_mgpu_2order(models: List[Module],
                                 for ((name, param), grad) in
                                 zip(fast_weights.items(), gradients)
                             )
+
+                        support_loss.append(loss.item())
 
                         y = create_nshot_task_label(k_way, q_queries).to(device)
                         model_logits = model.functional_forward(x_task_val,
@@ -243,6 +245,7 @@ def meta_gradient_ens_step_mgpu_2order(models: List[Module],
                         task_predictions_mgpu[i] = torch.cat(preds_mgpu)
                         models_losses[i] = models_task_losses
                         models_predictions[i] = models_task_preds
+                        support_losses[i] = support_loss
                 elif order == 1:
                     pass
                 else:
@@ -282,7 +285,10 @@ def meta_gradient_ens_step_mgpu_2order(models: List[Module],
 
     models_losses = models_losses[0]
     models_predictions = models_predictions[0]
-    return meta_batch_loss, task_predictions, models_losses, models_predictions
+    mean_support_loss = 0
+    for k, v in support_losses.items():
+        mean_support_loss += np.mean(v)
+    return meta_batch_loss, task_predictions, models_losses, models_predictions, mean_support_loss
 
 
 def meta_gradient_ens_step_mgpu_1order(models: List[Module],

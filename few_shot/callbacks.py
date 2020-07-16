@@ -163,6 +163,7 @@ class ProgressBarLogger(Callback):
         self.num_batches = self.params['num_batches']
         self.verbose = self.params['verbose']
         self.metrics = ['loss'] + self.params['metrics']
+        self.metrics += ['support_loss']
 
     def on_epoch_begin(self, epoch, logs=None):
         self.target = self.num_batches
