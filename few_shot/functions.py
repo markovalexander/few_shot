@@ -3,7 +3,7 @@ from torch.nn.functional import log_softmax
 from numpy import log as nplog, exp as npexp
 
 
-def mean_preds(output):
+def softmax_mean(output):
     output = torch.stack(output, dim=0)
     output = log_softmax(output, dim=-1)
     output = torch.mean(output, dim=0)
@@ -18,20 +18,31 @@ def logmeanexp_preds(output):
     return output
 
 
+def mean_softmax(output):
+    output = torch.stack(output, dim=0)
+    output = torch.mean(output, dim=0)
+    output = log_softmax(output, dim=-1)
+    return output
+
+
 def get_pred_fn(args):
     if args.train_pred_mode == "mean":
-        train_pred_fn = mean_preds
+        train_pred_fn = softmax_mean
     elif args.train_pred_mode == "logprobs":
         train_pred_fn = logmeanexp_preds
+    elif args.train_pred_mode == "ms":
+        train_pred_fn = mean_softmax
     else:
         raise ValueError("Train-pred-mode is not supported yet.")
 
     if args.test_pred_mode == "same":
         test_pred_fn = train_pred_fn
     elif args.test_pred_mode == "mean":
-        test_pred_fn = mean_preds
+        test_pred_fn = softmax_mean
     elif args.test_pred_mode == "logprobs":
         test_pred_fn = logmeanexp_preds
+    elif args.test_pred_mode == "ms":
+        test_pred_fn = mean_softmax
     else:
         raise ValueError("Test-pred-mode is not supported yet.")
 
