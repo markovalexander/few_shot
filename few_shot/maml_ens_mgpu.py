@@ -285,9 +285,12 @@ def meta_gradient_ens_step_mgpu_2order(models: List[Module],
 
     models_losses = models_losses[0]
     models_predictions = models_predictions[0]
+
     mean_support_loss = 0
     for k, v in support_losses.items():
         mean_support_loss += np.mean(v)
+    mean_support_loss /= len(devices)
+
     return meta_batch_loss, task_predictions, models_losses, models_predictions, mean_support_loss
 
 
