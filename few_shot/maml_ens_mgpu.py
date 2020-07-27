@@ -132,7 +132,7 @@ def meta_gradient_ens_step_mgpu_2order(models: List[Module],
     model_class = models[0].__class__
     models_to_replicas = {}
     model_replicas = [[] for _ in range(len(devices))]
-
+    losses = [loss_fn for _ in range(len(devices))]
     for i, model in enumerate(models):
         device_idx = i % len(devices)
         replica = model_class(*model_params).to(devices[device_idx],
@@ -146,6 +146,10 @@ def meta_gradient_ens_step_mgpu_2order(models: List[Module],
                 'Probably will trigger memory error: {} GPU has too many models'.format(
                     device_idx))
 
+    for device, loss in zip(devices, losses):
+        if isinstance(loss_fn, MixtureLoss):
+            loss_fn = loss_fn.to(device)
+
     lock = threading.Lock()
     barrier = threading.Barrier(len(devices))
     predictions = {}
@@ -158,7 +162,7 @@ def meta_gradient_ens_step_mgpu_2order(models: List[Module],
     support_losses = {}
     # grads = {}
 
-    def _worker(i, models, x, device):
+    def _worker(i, models, x, loss_fn, device):
 
         losses_mgpu = []
         preds_mgpu = []
@@ -208,8 +212,6 @@ def meta_gradient_ens_step_mgpu_2order(models: List[Module],
                 with lock:
                     task_predictions = gather_predictions(predictions, i)
 
-                if isinstance(loss_fn, MixtureLoss):
-                    loss_fn.to(device)
                 for task_pred in task_predictions:
                     y_pred = pred_fn(task_pred)
                     loss = loss_fn(y_pred, y)
@@ -262,9 +264,9 @@ def meta_gradient_ens_step_mgpu_2order(models: List[Module],
                     where="in replica {} on device {}".format(i, device))
 
     threads = [threading.Thread(target=_worker,
-                                args=(i, models, x.to(device), device))
-               for i, (models, device) in
-               enumerate(zip(model_replicas, devices))]
+                                args=(i, models, x.to(device), loss_fn, device))
+               for i, (models, loss_fn, device) in
+               enumerate(zip(model_replicas, losses, devices))]
 
     for o in optimisers:
         o.zero_grad()
@@ -320,6 +322,7 @@ def meta_gradient_ens_step_mgpu_1order(models: List[Module],
     model_class = models[0].__class__
     models_to_replicas = {}
     model_replicas = [[] for _ in range(len(devices))]
+    losses = [loss_fn for _ in range(len(devices))]
 
     for i, model in enumerate(models):
         device_idx = i % len(devices)
@@ -334,6 +337,10 @@ def meta_gradient_ens_step_mgpu_1order(models: List[Module],
                 'Probably will trigger memory error: {} GPU has too many models'.format(
                     device_idx))
 
+    for device, loss in zip(devices, losses):
+        if isinstance(loss_fn, MixtureLoss):
+            loss_fn = loss_fn.to(device)
+
     lock = threading.Lock()
     barrier = threading.Barrier(len(devices))
     predictions = {}
@@ -344,7 +351,7 @@ def meta_gradient_ens_step_mgpu_1order(models: List[Module],
     models_losses = {}
     models_predictions = {}
 
-    def _worker(i, models, x, device):
+    def _worker(i, models, x, loss_fn, device):
 
         for model in models:
             o = torch.optim.SGD(model.parameters(), lr=1)
@@ -452,9 +459,9 @@ def meta_gradient_ens_step_mgpu_1order(models: List[Module],
                     where="in replica {} on device {}".format(i, device))
 
     threads = [threading.Thread(target=_worker,
-                                args=(i, models, x.to(device), device))
-               for i, (models, device) in
-               enumerate(zip(model_replicas, devices))]
+                                args=(i, models, x.to(device), loss_fn, device))
+               for i, (models, loss_fn, device) in
+               enumerate(zip(model_replicas, losses, devices))]
 
     for o in optimisers:
         o.zero_grad()
