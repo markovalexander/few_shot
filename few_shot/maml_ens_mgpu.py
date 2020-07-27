@@ -9,6 +9,7 @@ import sys
 import traceback
 from collections import defaultdict
 import numpy as np
+from few_shot.functions import MixtureLoss
 
 
 class KeyErrorMessage(str):
@@ -207,6 +208,8 @@ def meta_gradient_ens_step_mgpu_2order(models: List[Module],
                 with lock:
                     task_predictions = gather_predictions(predictions, i)
 
+                if isinstance(loss_fn, MixtureLoss):
+                    loss_fn.to(device)
                 for task_pred in task_predictions:
                     y_pred = pred_fn(task_pred)
                     loss = loss_fn(y_pred, y)
