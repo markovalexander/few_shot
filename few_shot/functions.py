@@ -109,7 +109,7 @@ class MixtureLoss(torch.nn.Module):
             w = weights[i] * self.active_losses[i]
             pred = y_pred
             if self.softmax[i]:
-                pred = torch.exp(y_pred, dim=1)
+                pred = torch.exp(y_pred)
             y = y_true
             if self.onehot[i]:
                 y = oh
