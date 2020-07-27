@@ -48,6 +48,7 @@ parser.add_argument('--eval-batches', default=20, type=int)
 parser.add_argument('--n-models', default=3, type=int)
 parser.add_argument('--train-pred-mode', default='mean', type=str)
 parser.add_argument('--test-pred-mode', default='same', type=str)
+parser.add_argument('--active-losses', nargs="+", type=int)
 
 args = parser.parse_args()
 
@@ -97,7 +98,7 @@ meta_optimisers = [torch.optim.Adam(meta_model.parameters(), lr=args.meta_lr)
                    for meta_model in meta_models]
 
 
-loss_fn = MixtureLoss(args.n).to(device)
+loss_fn = MixtureLoss(args.n, args.active_losses).to(device)
 if args.order == 2:
     fit_fn = meta_gradient_ens_step_mgpu_2order
 elif args.order == 1:

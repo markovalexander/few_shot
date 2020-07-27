@@ -1,6 +1,6 @@
 import torch
 from torch.nn.functional import log_softmax
-from numpy import log as nplog, exp as npexp
+from numpy import log as nplog, exp as npexp, sum as npsum
 
 
 def softmax_mean(output):
@@ -54,30 +54,36 @@ def invsp(x):
 
 
 class MixtureLoss(torch.nn.Module):
-    def __init__(self, n_way):
+    def __init__(self, n_way, active_losses):
         super().__init__()
         self.n_way = n_way
+        self.active_losses = [0 for _ in range(4)]
+        for idx in active_losses:
+            self.active_losses[idx] = 1
+
+        self.n_losses = npsum(self.active_losses)
+
         self.losses = [
-            # torch.nn.MultiMarginLoss(margin=0.9, p=2),
+            torch.nn.MultiMarginLoss(margin=0.9, p=2),
             torch.nn.MSELoss(),  # one-hot, softmax
             torch.nn.CrossEntropyLoss(),
             torch.nn.MultiLabelSoftMarginLoss(),  # one-hot, softmax
         ]
         self.onehot = [
-            # False,
+            False,
             True,
             False,
             True
         ]
         self.softmax = [
-            # False,
+            False,
             True,
             False,
             True
         ]
         # Weights are inputs to softplus
         self.weights = torch.nn.Parameter(torch.DoubleTensor(len(self.losses)))
-        self.weights.data.fill_(invsp(1. / len(self.losses)))
+        self.weights.data.fill_(invsp(1. / self.n_losses))
 
     def get_weights(self):
         return torch.nn.functional.softplus(self.weights)
@@ -99,11 +105,13 @@ class MixtureLoss(torch.nn.Module):
         loss = 0.0
         weights = self.get_weights()
         for i in range(len(self.losses)):
+
+            w = weights[i] * self.active_losses[i]
             pred = y_pred
             if self.softmax[i]:
                 pred = torch.exp(y_pred, dim=1)
             y = y_true
             if self.onehot[i]:
                 y = oh
-            loss += weights[i] * self.losses[i](pred, y)
+            loss += w * self.losses[i](pred, y)
         return loss
