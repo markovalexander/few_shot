@@ -99,7 +99,7 @@ meta_optimisers = [torch.optim.Adam(meta_model.parameters(), lr=args.meta_lr)
                    for meta_model in meta_models]
 
 
-loss_fn = MixtureLoss(args.n, args.active_losses).to(device)
+loss_fn = MixtureLoss(args.n, args.active_losses)
 if args.order == 2:
     fit_fn = meta_gradient_ens_step_mgpu_2order
 elif args.order == 1:

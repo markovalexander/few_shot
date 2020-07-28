@@ -157,7 +157,7 @@ def meta_gradient_ens_step_mgpu_2order(models: List[Module],
     support_losses = {}
     # grads = {}
 
-    def _worker(i, models, x, loss_fn, device):
+    def _worker(i, models, x, device):
 
         losses_mgpu = []
         preds_mgpu = []
@@ -259,9 +259,9 @@ def meta_gradient_ens_step_mgpu_2order(models: List[Module],
                     where="in replica {} on device {}".format(i, device))
 
     threads = [threading.Thread(target=_worker,
-                                args=(i, models, x.to(device), loss_fn, device))
-               for i, (models, loss_fn, device) in
-               enumerate(zip(model_replicas, losses, devices))]
+                                args=(i, models, x.to(device), device))
+               for i, (models, device) in
+               enumerate(zip(model_replicas, devices))]
 
     for o in optimisers:
         o.zero_grad()

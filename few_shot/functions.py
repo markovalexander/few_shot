@@ -97,7 +97,7 @@ class MixtureLoss(object):
         return softplus(self.weights)
 
     def one_hot_encoding(self, tensor, n_classes):
-        ohe = torch.Tensor(tensor.size(0), n_classes).to(tensor.device, dtype=self.weights.dtype)
+        ohe = torch.Tensor(tensor.size(0), n_classes).to(tensor.device)
         ohe.zero_()
         ohe.scatter_(1, tensor[:, None], 1)
         return ohe
