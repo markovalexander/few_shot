@@ -71,9 +71,9 @@ class MixtureLoss(object):
 
         self.losses = [
             lambda x, y: F.multi_margin_loss(x, y, margin=0.9, p=2),
-            F.mse_loss,  # one-hot, softmax
+            F.mse_loss,  # one-hot, softmax, double
             F.cross_entropy,
-            F.multilabel_margin_loss # one-hot, softmax
+            F.multilabel_margin_loss # one-hot, softmax, long
         ]
 
         self.onehot = [
@@ -97,7 +97,7 @@ class MixtureLoss(object):
         return softplus(self.weights)
 
     def one_hot_encoding(self, tensor, n_classes):
-        ohe = torch.Tensor(tensor.size(0), n_classes).to(tensor.device)
+        ohe = torch.Tensor(tensor.size(0), n_classes).to(tensor.device).long()
         ohe.zero_()
         ohe.scatter_(1, tensor[:, None], 1)
         return ohe
@@ -121,5 +121,7 @@ class MixtureLoss(object):
             y = y_true
             if self.onehot[i]:
                 y = oh
+            if i == 1:
+                y = y.double()
             loss += w * self.losses[i](pred, y)
         return loss
