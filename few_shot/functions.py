@@ -1,6 +1,8 @@
 import torch
 from torch.nn.functional import log_softmax
 from numpy import log as nplog, exp as npexp, sum as npsum
+import torch.nn.functional as F
+import numpy as np
 
 
 def softmax_mean(output):
@@ -53,7 +55,11 @@ def invsp(x):
     return nplog(npexp(x) - 1)
 
 
-class MixtureLoss(torch.nn.Module):
+def softplus(x):
+    return np.log1p(np.exp(-np.abs(x))) + np.maximum(x, 0)
+
+
+class MixtureLoss(object):
     def __init__(self, n_way, active_losses):
         super().__init__()
         self.n_way = n_way
@@ -64,11 +70,12 @@ class MixtureLoss(torch.nn.Module):
         self.n_losses = npsum(self.active_losses)
 
         self.losses = [
-            torch.nn.MultiMarginLoss(margin=0.9, p=2),
-            torch.nn.MSELoss(),  # one-hot, softmax
-            torch.nn.CrossEntropyLoss(),
-            torch.nn.MultiLabelSoftMarginLoss(),  # one-hot, softmax
+            lambda x, y: F.multi_margin_loss(x, y, margin=0.9, p=2),
+            F.mse_loss,  # one-hot, softmax
+            F.cross_entropy,
+            F.multilabel_margin_loss # one-hot, softmax
         ]
+
         self.onehot = [
             False,
             True,
@@ -82,11 +89,12 @@ class MixtureLoss(torch.nn.Module):
             True
         ]
         # Weights are inputs to softplus
-        self.weights = torch.nn.Parameter(torch.DoubleTensor(len(self.losses)))
-        self.weights.data.fill_(invsp(1. / self.n_losses))
+        self.weights = np.ones(len(self.losses)) * invsp(1. / self.n_losses)
+        # self.weights = torch.nn.Parameter(torch.DoubleTensor(len(self.losses)))
+        # self.weights.data.fill_(invsp(1. / self.n_losses))
 
     def get_weights(self):
-        return torch.nn.functional.softplus(self.weights)
+        return softplus(self.weights)
 
     def one_hot_encoding(self, tensor, n_classes):
         ohe = torch.Tensor(tensor.size(0), n_classes).to(tensor.device, dtype=self.weights.dtype)
@@ -94,7 +102,7 @@ class MixtureLoss(torch.nn.Module):
         ohe.scatter_(1, tensor[:, None], 1)
         return ohe
 
-    def forward(self, y_pred, y_true):
+    def __call__(self, y_pred, y_true):
         """
 
         :param y_pred: must be log probabilities
