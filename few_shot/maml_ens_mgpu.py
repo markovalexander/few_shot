@@ -410,7 +410,7 @@ def meta_gradient_ens_step_mgpu_2order_mixture(models: List[Module],
                             task_loss = []
                             task_pred = []
                             for task in task_predictions:
-                                loss = loss_fn(
+                                loss = F.cross_entropy(
                                     F.log_softmax(task[model_idx], dim=-1),
                                     y).item()
                                 task_loss.append(loss)
@@ -478,7 +478,6 @@ def meta_gradient_ens_step_mgpu_2order_mixture(models: List[Module],
     mean_support_loss /= len(devices)
 
     return meta_batch_loss, task_predictions, models_losses, models_predictions, mean_support_loss
-
 
 
 def meta_gradient_ens_step_mgpu_1order(models: List[Module],
