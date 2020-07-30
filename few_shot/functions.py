@@ -125,3 +125,18 @@ class MixtureLoss(object):
                 y = y.double()
             loss += w * self.losses[i](pred, y)
         return loss
+
+
+class MixturePredsLoss(object):
+    def __init__(self, loss_fn, lmbda):
+        self.lmbda = lmbda
+        self.loss_fn = loss_fn
+
+    def __call__(self, output, y_true):
+        mean_pred = softmax_mean(output)
+        logprobs_pred = logmeanexp_preds(output)
+
+        mean_loss = self.loss_fn(mean_pred, y_true)
+        logprobs_loss = self.loss_fn(logprobs_pred, y_true)
+        loss = self.lmbda * mean_loss + (1 - self.lmbda) * logprobs_loss
+        return loss
