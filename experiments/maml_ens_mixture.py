@@ -145,7 +145,7 @@ callbacks = [
         pred_fn=test_pred_fn
     ),
     EvaluateFewShot(
-        eval_fn=fit_fn,
+        eval_fn=meta_gradient_ens_step_mgpu_2order,
         num_tasks=args.eval_batches,
         n_shot=args.n,
         k_way=args.k,
