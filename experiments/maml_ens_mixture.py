@@ -64,7 +64,7 @@ else:
     raise(ValueError('Unsupported dataset'))
 
 param_str = f'{args.dataset}_order={args.order}_n={args.n}_k={args.k}_metabatch={args.meta_batch_size}_' \
-            f'train_steps={args.inner_train_steps}_val_steps={args.inner_val_steps}_n_models={args.n_models}' \
+            f'train_steps={args.inner_train_steps}_val_steps={args.inner_val_steps}_n_models={args.n_models}_' \
             f'lambda={args.weight}'
 print(param_str)
 

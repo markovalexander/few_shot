@@ -154,10 +154,11 @@ def fit(model: Union[Module, List[Module]], optimiser: Optimizer, loss_fn: Calla
                 logprobs_pred.append(y_pred_)
 
             y_pred_logprobs = torch.cat(logprobs_pred)
-            with torch.no_grad():
-                loss_logprobs = loss_fn(y_pred_logprobs, y).item()
-
-            batch_logs['logprobs_loss'] = loss_logprobs
+            # TODO: make it work with MixturePredLoss
+            # with torch.no_grad():
+            #     loss_logprobs = loss_fn(y_pred_logprobs, y).item()
+            #
+            # batch_logs['logprobs_loss'] = loss_logprobs
             batch_logs['logprobs_nll'] = nll_loss(y_pred_logprobs, y, reduction="mean").item()
             batch_logs = batch_metrics(model, y_pred_logprobs, y, metrics, batch_logs, 'logprobs')
 
