@@ -169,7 +169,7 @@ callbacks = [
     ),
     ReduceLRCallback,
     CSVLogger(PATH + f'/logs/maml_ens/mgpu-mixture_{param_str}.csv',
-              hash=hash),
+              hash=hash),  # TODO: add logprobs and mean loss values from mixture
 ]
 
 
