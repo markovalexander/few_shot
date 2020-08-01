@@ -415,6 +415,20 @@ class ReduceLROnPlateau(Callback):
         return self.cooldown_counter > 0
 
 
+class ModelLoader(Callback):
+
+    def __init__(self, names):
+        super().__init__()
+        self.names = names
+        self.prefix = "/home/avmarkov/few-shot/logs/maml_ens"
+
+    def on_train_begin(self, logs=None):
+        for model, checkpoint_name in zip(self.model, self.names):
+            checkpoint = os.path.join(self.prefix, checkpoint_name)
+            state_dict = torch.load(checkpoint)
+            model.load_state_dict(state_dict)
+
+
 class ModelCheckpoint(Callback):
     """Save the model after every epoch.
 
