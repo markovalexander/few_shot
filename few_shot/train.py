@@ -133,14 +133,29 @@ def fit(model: Union[Module, List[Module]], optimiser: Optimizer, loss_fn: Calla
             callbacks.on_batch_begin(batch_index, batch_logs)
 
             x, y = prepare_batch(batch)
-            loss, y_pred, *base_logs = fit_function(model, optimiser, loss_fn, x, y, **fit_function_kwargs)
+
+            # result = {
+            #     "meta_batch_loss": meta_batch_loss,
+            #     "task_predictions": task_predictions,
+            #     "models_losses": models_losses,
+            #     "models_predictions": models_predictions,
+            #     "mean_support_loss": mean_support_loss
+            # }
+
+            result = fit_function(model, optimiser, loss_fn, x, y, **fit_function_kwargs)
+
+            loss = result['meta_batch_loss']
+            y_pred = result['task_predictions']
+            models_losses = result['models_losses']
+            models_preds = result['models_predictions']
+            support_loss = result['mean_support_loss']
+
             batch_logs['loss'] = loss.item()
-            batch_logs['support_loss'] = base_logs[-1]
+            batch_logs['support_loss'] = support_loss
 
             # Loops through all metrics
             batch_logs = batch_metrics(model, y_pred, y, metrics, batch_logs)
 
-            models_preds = base_logs[1]  # [n_models, n_tasks, n_objects, n_classes]
             task_preds = defaultdict(list)
             for model_pred in models_preds:
                 for i, task in enumerate(model_pred):
@@ -162,13 +177,9 @@ def fit(model: Union[Module, List[Module]], optimiser: Optimizer, loss_fn: Calla
             batch_logs['logprobs_nll'] = nll_loss(y_pred_logprobs, y, reduction="mean").item()
             batch_logs = batch_metrics(model, y_pred_logprobs, y, metrics, batch_logs, 'logprobs')
 
-            if len(base_logs) > 0:
-                models_losses = base_logs[0]
-                models_preds = base_logs[1]
-
-                for i, (loss, y_pred) in enumerate(zip(models_losses, models_preds)):
-                    batch_logs[f'loss_{i}'] = nmean(loss)
-                    batch_logs[f'categorical_accuracy_{i}'] = NAMED_METRICS['categorical_accuracy'](y, torch.cat(y_pred))
+            for i, (loss, y_pred) in enumerate(zip(models_losses, models_preds)):
+                batch_logs[f'loss_{i}'] = nmean(loss)
+                batch_logs[f'categorical_accuracy_{i}'] = NAMED_METRICS['categorical_accuracy'](y, torch.cat(y_pred))
 
             callbacks.on_batch_end(batch_index, batch_logs)
 
@@ -252,9 +263,11 @@ def save_res(model: Union[Module, List[Module]], optimiser: Optimizer, loss_fn: 
             callbacks.on_batch_begin(batch_index, batch_logs)
 
             x, y = prepare_batch(batch)
-            loss, y_pred, *base_logs = fit_function(model, optimiser, loss_fn, x, y, **fit_function_kwargs)
+            result = fit_function(model, optimiser, loss_fn, x, y, **fit_function_kwargs)
 
-            models_preds = base_logs[1]  # [n_models, n_tasks, n_object, n_classes]
+            loss = result['meta_batch_loss']
+            y_pred = result['task_predictions']
+            models_preds = result['models_predictions']
             batch_preds.append(to_numpy(models_preds))
 
             callbacks.on_batch_end(batch_index, batch_logs)
