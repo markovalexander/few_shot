@@ -99,7 +99,7 @@ meta_optimisers = [torch.optim.Adam(meta_model.parameters(), lr=args.meta_lr)
                    for meta_model in meta_models]
 
 
-loss_fn = MixturePredsLoss(loss_fn=F.cross_entropy, lmbda=args.weight)
+loss_fn = MixturePredsLoss(loss_fn=F.nll_loss, lmbda=args.weight)
 fit_fn = meta_gradient_ens_step_mgpu_2order_mixture
 
 train_pred_fn, test_pred_fn = logmeanexp_preds, logmeanexp_preds
