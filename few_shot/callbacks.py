@@ -420,10 +420,12 @@ class ModelLoader(Callback):
     def __init__(self, names):
         super().__init__()
         self.names = names
-        self.prefix = "/home/avmarkov/few-shot/logs/maml_ens"
+        self.prefix = "/home/avmarkov/few-shot/models/maml_ens"
 
     def on_train_begin(self, logs=None):
-        for model, checkpoint_name in zip(self.model, self.names):
+        for i, model in enumerate(self.model):
+            checkpoint_name = self.names[0]
+            checkpoint_name = checkpoint_name.split('.')[0] + ".pth" + checkpoint_name[-3:] + f"_{i}.pth"
             checkpoint = os.path.join(self.prefix, checkpoint_name)
             state_dict = torch.load(checkpoint)
             model.load_state_dict(state_dict)
