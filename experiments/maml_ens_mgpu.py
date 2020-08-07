@@ -130,6 +130,11 @@ def prepare_meta_batch(n, k, q, meta_batch_size):
 ReduceLRCallback = [ReduceLROnPlateau(patience=10, factor=0.5, monitor=f'val_loss', index=i)
                     for i in range(len(meta_optimisers))]
 ReduceLRCallback = CallbackList(ReduceLRCallback)
+if args.track_snr:
+    snr_callbacks = CallbackList([SNRAccumulator(model_idx, idx) for idx, model_idx in enumerate(meta_models)])
+    callbacks.append(snr_callbacks)
+else:
+    snr_callbacks = Callback()
 
 hash = ''.join([chr(random.randint(97, 122)) for _ in range(3)])
 callbacks = [
@@ -173,6 +178,7 @@ callbacks = [
         monitor=f'val_{args.n}-shot_{args.k}-way_acc',
         hash=hash
     ),
+    snr_callbacks,
     ReduceLRCallback,
     CSVLogger(PATH + f'/logs/maml_ens/mgpu_{param_str}.csv',
               hash=hash),
