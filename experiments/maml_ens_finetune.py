@@ -49,12 +49,9 @@ parser.add_argument('--n-models', default=3, type=int)
 parser.add_argument('--train-pred-mode', default='mean', type=str)
 parser.add_argument('--test-pred-mode', default='same', type=str)
 
-names = """mgpu_miniImageNet_order=2_n=5_k=5_metabatch=2_train_steps=5_val_steps=10_n_models=3_train_pred_mode=ms_test_pred_mode=same.csvwrs
-mgpu_miniImageNet_order=2_n=5_k=5_metabatch=2_train_steps=5_val_steps=10_n_models=12_train_pred_mode=ms_test_pred_mode=same.csvlxy
-mgpu_miniImageNet_order=2_n=5_k=5_metabatch=2_train_steps=5_val_steps=10_n_models=6_train_pred_mode=ms_test_pred_mode=same.csvjhf
-""".split()
+names = """mgpu_miniImageNet_order=2_n=5_k=5_metabatch=2_train_steps=5_val_steps=10_n_models=3_pred_mode=mean.csvzbs""".split()
 print('\n'.join(names))
-logs_name = "miniImageNet_order=2_n=5_k=5_metabatch=2_train_steps=5_val_steps=10_n_models=3_train_pred_mode=ms_test_pred_mode=same"
+logs_name = "miniImageNet_order=2_n=5_k=5_metabatch=2_train_steps=5_val_steps=10_n_models=3_train_pred_mode=mean_test_pred_mode=same"
 args = parser.parse_args()
 
 if args.dataset == 'omniglot':

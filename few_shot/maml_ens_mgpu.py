@@ -291,7 +291,14 @@ def meta_gradient_ens_step_mgpu_2order(models: List[Module],
         mean_support_loss += np.mean(v)
     mean_support_loss /= len(devices)
 
-    return meta_batch_loss, task_predictions, models_losses, models_predictions, mean_support_loss
+    result = {
+        "meta_batch_loss" : meta_batch_loss,
+        "task_predictions" : task_predictions,
+        "models_losses" : models_losses,
+        "models_predictions" : models_predictions,
+        "mean_support_loss" : mean_support_loss
+    }
+    return result
 
 
 # TODO: move this logic inside main function
@@ -477,8 +484,15 @@ def meta_gradient_ens_step_mgpu_2order_mixture(models: List[Module],
         mean_support_loss += np.mean(v)
     mean_support_loss /= len(devices)
 
-    # TODO: return dict values
-    return meta_batch_loss, task_predictions, models_losses, models_predictions, mean_support_loss
+    result = {
+        "meta_batch_loss" : meta_batch_loss,
+        "task_predictions" : task_predictions,
+        "models_losses" : models_losses,
+        "models_predictions" : models_predictions,
+        "mean_support_loss" : mean_support_loss
+    }
+    return result
+    #return meta_batch_loss, task_predictions, models_losses, models_predictions, mean_support_loss
 
 
 def meta_gradient_ens_step_mgpu_1order(models: List[Module],

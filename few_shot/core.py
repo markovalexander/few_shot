@@ -138,7 +138,8 @@ class EvaluateFewShot(Callback):
         for batch_index, batch in enumerate(self.taskloader):
             x, y = self.prepare_batch(batch)
 
-            loss, y_pred, *base_logs = self.eval_fn(
+            #loss, y_pred, *base_logs = self.eval_fn(
+            result = self.eval_fn(
                 self.model,
                 self.optimiser,
                 self.loss_fn,
@@ -150,14 +151,16 @@ class EvaluateFewShot(Callback):
                 train=False,
                 **self.kwargs
             )
-            if len(base_logs) > 0:
-                models_losses = base_logs[0]
-                models_preds = base_logs[1]
 
-                for i, (loss_i, y_pred_i) in enumerate(zip(models_losses, models_preds)):
-                    y_pred_i = torch.cat(y_pred_i)
-                    per_model_stats[f'loss_{i}'] += np.mean(loss_i) * y_pred_i.shape[0]
-                    per_model_stats[self.metric_name + f"_{i}"] += categorical_accuracy(y, y_pred_i) * y_pred_i.shape[0]
+            loss = result['meta_batch_loss']
+            y_pred = result['task_predictions']
+            models_losses = result['models_losses']
+            models_preds = result['models_predictions']
+
+            for i, (loss_i, y_pred_i) in enumerate(zip(models_losses, models_preds)):
+                y_pred_i = torch.cat(y_pred_i)
+                per_model_stats[f'loss_{i}'] += np.mean(loss_i) * y_pred_i.shape[0]
+                per_model_stats[self.metric_name + f"_{i}"] += categorical_accuracy(y, y_pred_i) * y_pred_i.shape[0]
 
             seen += y_pred.shape[0]
 
