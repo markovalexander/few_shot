@@ -462,7 +462,7 @@ class SNRAccumulator(Callback):
 
         total_snr, n_params = 0, 0
         for v in snr.values():
-            total_snr += v
+            total_snr += np.sum(v)
             n_params += v.size
 
         logs[f'total_snr_{self.idx}'] = total_snr / n_params
