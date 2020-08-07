@@ -48,6 +48,7 @@ parser.add_argument('--eval-batches', default=20, type=int)
 parser.add_argument('--n-models', default=3, type=int)
 parser.add_argument('--train-pred-mode', default='mean', type=str)
 parser.add_argument('--test-pred-mode', default='same', type=str)
+parser.add_argument('--track-snr', action='store_true')
 
 args = parser.parse_args()
 
@@ -177,6 +178,8 @@ callbacks = [
               hash=hash),
 ]
 
+if args.track_snr:
+    snr_callbacks = [SNRAccumulator(model_idx, idx) for idx, model_idx in enumerate(meta_models)]
 
 fit(
     meta_models,

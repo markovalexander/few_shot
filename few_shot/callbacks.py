@@ -134,6 +134,7 @@ class DefaultCallback(Callback):
 
         self.metrics += ['logprobs_loss'] + ['logprobs_' + metric for metric in self.params['metrics']]
         self.metrics += ['logprobs_nll']
+        self.metrics += [f'total_snr_{i}' for i in range(self.params['n_models'])]
 
     def on_batch_end(self, batch, logs=None):
         logs = logs or {}
@@ -164,6 +165,7 @@ class ProgressBarLogger(Callback):
         self.verbose = self.params['verbose']
         self.metrics = ['loss'] + self.params['metrics']
         self.metrics += ['support_loss']
+        self.metrics += ['total_snr_0']
 
     def on_epoch_begin(self, epoch, logs=None):
         self.target = self.num_batches
@@ -429,6 +431,42 @@ class ModelLoader(Callback):
             checkpoint = os.path.join(self.prefix, checkpoint_name)
             state_dict = torch.load(checkpoint)
             model.load_state_dict(state_dict)
+
+
+class SNRAccumulator(Callback):
+    def __init__(self, model, index):
+        super().__init__()
+        self.model = model
+        self.idx = index
+        self.first_moment = {k: np.zeros(v.shape) for k, v in model.named_parameters()}
+        self.second_moment = {k: np.zeros(v.shape) for k, v in model.named_parameters()}
+        self.count = 0
+
+    def on_epoch_begin(self, epoch, logs=None):
+        for key in self.first_moment.keys():
+            self.first_moment[key].fill(0)
+            self.second_moment[key].fill(0)
+        self.count = 0
+
+    def on_batch_end(self, batch, logs=None):
+        for k, v in zip(self.model.named_parameters()):
+            grad = v.grad.data.cpu().numpy()
+            self.first_moment[k] += grad
+            self.second_moment[k] += grad ** 2
+        self.count += 1
+
+    def on_epoch_end(self, epoch, logs=None, eps=1e-6):
+        std = {k: np.sqrt(eps + self.second_moment[k] / self.count - (self.first_moment[k] / self.count) ** 2) for k in self.first_moment.keys()}
+        mean = {k: self.first_moment[k] / self.count for k in self.first_moment.keys()}
+        snr = {k: mean[k] / std[k] for k in self.first_moment.keys()}
+
+        total_snr, n_params = 0, 0
+        for v in snr.values():
+            total_snr += v
+            n_params += v.size
+
+        logs[f'total_snr_{self.idx}'] = total_snr / n_params
+        return snr
 
 
 class ModelCheckpoint(Callback):
