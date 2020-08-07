@@ -436,7 +436,7 @@ class ModelLoader(Callback):
 class SNRAccumulator(Callback):
     def __init__(self, model, index):
         super().__init__()
-        self.model = model
+        self.track_model = model
         self.idx = index
         self.first_moment = {k: np.zeros(v.shape) for k, v in model.named_parameters()}
         self.second_moment = {k: np.zeros(v.shape) for k, v in model.named_parameters()}
@@ -449,7 +449,7 @@ class SNRAccumulator(Callback):
         self.count = 0
 
     def on_batch_end(self, batch, logs=None):
-        for k, v in zip(self.model.named_parameters()):
+        for k, v in self.track_model.named_parameters():
             grad = v.grad.data.cpu().numpy()
             self.first_moment[k] += grad
             self.second_moment[k] += grad ** 2

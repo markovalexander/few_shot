@@ -143,7 +143,7 @@ def fit(model: Union[Module, List[Module]], optimiser: Optimizer, loss_fn: Calla
             # }
 
             result = fit_function(model, optimiser, loss_fn, x, y, **fit_function_kwargs)
-
+            
             loss = result['meta_batch_loss']
             y_pred = result['task_predictions']
             models_losses = result['models_losses']
