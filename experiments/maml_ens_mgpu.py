@@ -132,7 +132,6 @@ ReduceLRCallback = [ReduceLROnPlateau(patience=10, factor=0.5, monitor=f'val_los
 ReduceLRCallback = CallbackList(ReduceLRCallback)
 if args.track_snr:
     snr_callbacks = CallbackList([SNRAccumulator(model_idx, idx) for idx, model_idx in enumerate(meta_models)])
-    callbacks.append(snr_callbacks)
 else:
     snr_callbacks = Callback()
 
