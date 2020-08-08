@@ -183,11 +183,6 @@ callbacks = [
               hash=hash),
 ]
 
-if args.track_snr:
-    snr_callbacks = CallbackList([SNRAccumulator(model_idx, idx) for idx, model_idx in enumerate(meta_models)])
-    callbacks.append(snr_callbacks)
-
-
 fit(
     meta_models,
     meta_optimisers,
