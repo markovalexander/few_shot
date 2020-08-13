@@ -177,7 +177,9 @@ callbacks = [
         monitor=f'val_{args.n}-shot_{args.k}-way_acc',
         hash=hash
     ),
-    AccumulateSNR(n_batches=30),
+    AccumulateSNR(eval_fn=fit_fn, taskloader=background_taskloader,
+                  prepare_batch=prepare_meta_batch(args.n, args.k, args.q, args.meta_batch_size),
+                  n_batches=30),
     # snr_callbacks,
     ReduceLRCallback,
     CSVLogger(PATH + f'/logs/maml_ens/mgpu_{param_str}.csv',

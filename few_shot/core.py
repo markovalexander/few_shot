@@ -85,8 +85,11 @@ class NShotTaskSampler(Sampler):
 
 
 class AccumulateSNR(Callback):
-    def __init__(self, n_batches=20):
+    def __init__(self, eval_fn, taskloader, prepare_batch, n_batches=20):
         super().__init__()
+        self.eval_fn = eval_fn
+        self.taskloader = taskloader
+        self.prepare_batch = prepare_batch
         self.n_batches = n_batches
 
     def on_train_begin(self, logs=None):
@@ -138,7 +141,6 @@ class AccumulateSNR(Callback):
         snrs = [self.evaluate_model_snr(fm, sm) for fm, sm in zip(self.first_moment, self.second_moment)]
         for i, snr in enumerate(snrs):
             logs[f'snr_{i}'] = snr
-
 
     def evaluate_model_snr(self, first_moment, second_moment, eps=1e-6):
         std = {k: np.sqrt(eps + second_moment[k] / self.count - (first_moment[k] / self.count) ** 2)
