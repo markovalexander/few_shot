@@ -6,6 +6,7 @@ import torch
 import random
 
 import sys
+
 sys.path.append('..')
 
 from few_shot.datasets import OmniglotDataset, MiniImageNet
@@ -25,7 +26,6 @@ assert torch.cuda.is_available()
 
 device = torch.device('cuda')
 torch.backends.cudnn.benchmark = True
-
 
 ##############
 # Parameters #
@@ -61,13 +61,12 @@ elif args.dataset == 'miniImageNet':
     fc_layer_size = 1600
     num_input_channels = 3
 else:
-    raise(ValueError('Unsupported dataset'))
+    raise (ValueError('Unsupported dataset'))
 
 param_str = f'{args.dataset}_order={args.order}_n={args.n}_k={args.k}_metabatch={args.meta_batch_size}_' \
-            f'train_steps={args.inner_train_steps}_val_steps={args.inner_val_steps}_n_models={args.n_models}_train_pred_mode={args.train_pred_mode}_' \
-            f'test_pred_mode={args.test_pred_mode}'
+    f'train_steps={args.inner_train_steps}_val_steps={args.inner_val_steps}_n_models={args.n_models}_train_pred_mode={args.train_pred_mode}_' \
+    f'test_pred_mode={args.test_pred_mode}'
 print(param_str)
-
 
 ###################
 # Create datasets #
@@ -98,7 +97,6 @@ meta_models = [FewShotClassifier(num_input_channels, args.k, fc_layer_size).to(d
 meta_optimisers = [torch.optim.Adam(meta_model.parameters(), lr=args.meta_lr)
                    for meta_model in meta_models]
 
-
 loss_fn = F.nll_loss if args.order > 0 else F.cross_entropy
 if args.order == 2:
     fit_fn = meta_gradient_ens_step_mgpu_2order
@@ -106,7 +104,6 @@ elif args.order == 1:
     fit_fn = meta_gradient_ens_step_mgpu_1order
 else:
     fit_fn = meta_gradient_ens_step_mgpu_meanloss
-
 
 train_pred_fn, test_pred_fn = get_pred_fn(args)
 
@@ -117,7 +114,7 @@ def prepare_meta_batch(n, k, q, meta_batch_size):
         # Reshape to `meta_batch_size` number of tasks. Each task contains
         # n*k support samples to train the fast model on and q*k query samples to
         # evaluate the fast model on and generate meta-gradients
-        x = x.reshape(meta_batch_size, n*k + q*k, num_input_channels, x.shape[-2], x.shape[-1])
+        x = x.reshape(meta_batch_size, n * k + q * k, num_input_channels, x.shape[-2], x.shape[-1])
         # Move to device
         x = x.double().to(device)
         # Create label
@@ -177,9 +174,23 @@ callbacks = [
         monitor=f'val_{args.n}-shot_{args.k}-way_acc',
         hash=hash
     ),
-    AccumulateSNR(eval_fn=fit_fn, taskloader=background_taskloader,
+    AccumulateSNR(eval_fn=fit_fn,
+                  num_tasks=args.eval_batches,
+                  n_shot=args.n,
+                  k_way=args.k,
+                  q_queries=args.q,
+                  taskloader=evaluation_taskloader,
                   prepare_batch=prepare_meta_batch(args.n, args.k, args.q, args.meta_batch_size),
-                  n_batches=30),
+                  loss_fn=loss_fn,
+                  # MAML kwargs
+                  inner_train_steps=args.inner_val_steps,
+                  inner_lr=args.inner_lr,
+                  device=device,
+                  order=args.order,
+                  model_params=model_params,
+                  pred_fn=test_pred_fn,
+                  n_batches=30
+                  ),
     # snr_callbacks,
     ReduceLRCallback,
     CSVLogger(PATH + f'/logs/maml_ens/mgpu_{param_str}.csv',

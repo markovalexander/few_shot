@@ -85,17 +85,34 @@ class NShotTaskSampler(Sampler):
 
 
 class AccumulateSNR(Callback):
-    def __init__(self, eval_fn, taskloader, prepare_batch, n_batches=20):
+    def __init__(self,
+                 eval_fn: Callable,
+                 num_tasks: int,
+                 n_shot: int,
+                 k_way: int,
+                 q_queries: int,
+                 taskloader: torch.utils.data.DataLoader,
+                 prepare_batch: Callable,
+                 loss_fn: Callable,
+                 n_batches=20,
+                 **kwargs):
         super().__init__()
         self.eval_fn = eval_fn
+        self.loss_fn = loss_fn
+        self.num_tasks = num_tasks
+        self.n_shot = n_shot
+        self.k_way = k_way
+        self.q_queries = q_queries
         self.taskloader = taskloader
         self.prepare_batch = prepare_batch
+        self.kwargs = kwargs
         self.n_batches = n_batches
 
     def on_train_begin(self, logs=None):
         self.first_moment = [{k: np.zeros(v.shape) for k, v in model.named_parameters()} for _, model in enumerate(self.model)]
         self.second_moment = [{k: np.zeros(v.shape) for k, v in model.named_parameters()} for _, model in enumerate(self.model)]
         self.count = 0
+        self.optimiser = self.params['optimiser']
 
     def on_epoch_begin(self, epoch, logs=None):
         for fm, sm in zip(self.first_moment, self.second_moment):
