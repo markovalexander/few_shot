@@ -9,7 +9,7 @@ import sys
 sys.path.append('..')
 
 from few_shot.datasets import OmniglotDataset, MiniImageNet
-from few_shot.core import NShotTaskSampler, create_nshot_task_label, EvaluateFewShot
+from few_shot.core import NShotTaskSampler, create_nshot_task_label, EvaluateFewShot, AccumulateSNR
 from few_shot.maml_ens_mgpu import meta_gradient_ens_step_mgpu_2order, \
     meta_gradient_ens_step_mgpu_1order
 from few_shot.maml_mean_loss import meta_gradient_ens_step_mgpu_meanloss
@@ -177,7 +177,8 @@ callbacks = [
         monitor=f'val_{args.n}-shot_{args.k}-way_acc',
         hash=hash
     ),
-    snr_callbacks,
+    AccumulateSNR(n_batches=30),
+    # snr_callbacks,
     ReduceLRCallback,
     CSVLogger(PATH + f'/logs/maml_ens/mgpu_{param_str}.csv',
               hash=hash),

@@ -456,17 +456,16 @@ class SNRAccumulator(Callback):
         self.count += 1
 
     def on_epoch_end(self, epoch, logs=None, eps=1e-6):
-        std = {k: np.sqrt(eps + self.second_moment[k] / self.count - (self.first_moment[k] / self.count) ** 2) for k in self.first_moment.keys()}
+        std = {k: np.sqrt(eps + self.second_moment[k] / self.count - (self.first_moment[k] / self.count) ** 2)
+               for k in self.first_moment.keys()}
         mean = {k: self.first_moment[k] / self.count for k in self.first_moment.keys()}
         snr = {k: mean[k] / std[k] for k in self.first_moment.keys()}
 
         total_snr, n_params = 0, 0
         for v in snr.values():
-            total_snr += np.sum(v)
+            total_snr += np.sum(np.abs(v))
             n_params += v.size
-
         logs[f'total_snr_{self.idx}'] = total_snr / n_params
-        return snr
 
 
 class ModelCheckpoint(Callback):

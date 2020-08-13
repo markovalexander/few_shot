@@ -123,7 +123,8 @@ def meta_gradient_ens_step_mgpu_2order(models: List[Module],
                                         inner_lr: float,
                                         train: bool,
                                         model_params: List,
-                                        device: Union[str, torch.device]):
+                                        device: Union[str, torch.device],
+                                        update_weights: bool = True):
     data_shape = x.shape[2:]
     create_graph = (True if order == 2 else False) and train
 
@@ -277,8 +278,9 @@ def meta_gradient_ens_step_mgpu_2order(models: List[Module],
 
     if train:
         copy_grads(models, model_replicas, models_to_replicas, device)
-        for o in optimisers:
-            o.step()
+        if update_weights:
+            for o in optimisers:
+                o.step()
 
     meta_batch_loss = meta_batch_losses[0]
     task_predictions = task_predictions_mgpu[0]

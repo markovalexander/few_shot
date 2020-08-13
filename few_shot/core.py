@@ -84,6 +84,78 @@ class NShotTaskSampler(Sampler):
             yield np.stack(batch)
 
 
+class AccumulateSNR(Callback):
+    def __init__(self, n_batches=20):
+        super().__init__()
+        self.n_batches = n_batches
+
+    def on_train_begin(self, logs=None):
+        self.first_moment = [{k: np.zeros(v.shape) for k, v in model.named_parameters()} for _, model in enumerate(self.model)]
+        self.second_moment = [{k: np.zeros(v.shape) for k, v in model.named_parameters()} for _, model in enumerate(self.model)]
+        self.count = 0
+
+    def on_epoch_begin(self, epoch, logs=None):
+        for first_moment in self.first_moment:
+            for key in first_moment.keys():
+                self.first_moment[key].fill(0)
+                self.second_moment[key].fill(0)
+        self.count = 0
+
+    def on_epoch_end(self, epoch, logs=None):
+        logs = logs or {}
+        seen = 0
+
+        if isinstance(self.model, list):
+            per_model_stats = {f'loss_{i}': 0 for i in range(len(self.model))}
+            per_model_stats.update({self.metric_name + f"_{i}": 0 for i in range(len(self.model))})
+
+        for batch_index, batch in enumerate(self.taskloader):
+            if batch_index > self.n_batches:
+                break
+            x, y = self.prepare_batch(batch)
+
+            #loss, y_pred, *base_logs = self.eval_fn(
+            result = self.eval_fn(
+                self.model,
+                self.optimiser,
+                self.loss_fn,
+                x,
+                y,
+                n_shot=self.n_shot,
+                k_way=self.k_way,
+                q_queries=self.q_queries,
+                train=False,
+                **self.kwargs
+            )
+
+            for idx, model in enumerate(self.model):
+                for k, v in model.named_parameters():
+                    grad = v.grad.data.cpu().numpy()
+                    self.first_moment[idx][k] += grad
+                    self.second_moment[idx][k] += grad ** 2
+            self.count += 1
+
+        snrs = [self.evaluate_model_snr(fm, sm) for fm, sm in zip(self.first_moment, self.second_moment)]
+        for i, snr in enumerate(snrs):
+            logs[f'snr_{i}'] = snr
+
+
+    def evaluate_model_snr(self, first_moment, second_moment, eps=1e-6):
+        std = {k: np.sqrt(eps + second_moment[k] / self.count - (first_moment[k] / self.count) ** 2)
+               for k in first_moment.keys()}
+        mean = {k: first_moment[k] / self.count for k in first_moment.keys()}
+        snr = {k: mean[k] / std[k] for k in first_moment.keys()}
+
+        total_snr, n_params = 0, 0
+        for v in snr.values():
+            total_snr += np.sum(np.abs(v))
+            n_params += v.size
+
+        total_snr /= n_params
+        return total_snr
+
+
+
 class EvaluateFewShot(Callback):
     """Evaluate a network on  an n-shot, k-way classification tasks after every epoch.
 
