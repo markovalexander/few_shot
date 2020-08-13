@@ -95,10 +95,10 @@ class AccumulateSNR(Callback):
         self.count = 0
 
     def on_epoch_begin(self, epoch, logs=None):
-        for first_moment in self.first_moment:
-            for key in first_moment.keys():
-                self.first_moment[key].fill(0)
-                self.second_moment[key].fill(0)
+        for fm, sm in zip(self.first_moment, self.second_moment):
+            for key in fm.keys():
+                fm[key].fill(0)
+                sm[key].fill(0)
         self.count = 0
 
     def on_epoch_end(self, epoch, logs=None):
