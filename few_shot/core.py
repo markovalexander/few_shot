@@ -108,10 +108,6 @@ class AccumulateSNR(Callback):
         logs = logs or {}
         seen = 0
 
-        if isinstance(self.model, list):
-            per_model_stats = {f'loss_{i}': 0 for i in range(len(self.model))}
-            per_model_stats.update({self.metric_name + f"_{i}": 0 for i in range(len(self.model))})
-
         for batch_index, batch in enumerate(self.taskloader):
             if batch_index > self.n_batches:
                 break
