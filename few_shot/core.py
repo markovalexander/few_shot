@@ -140,7 +140,8 @@ class AccumulateSNR(Callback):
                 n_shot=self.n_shot,
                 k_way=self.k_way,
                 q_queries=self.q_queries,
-                train=False,
+                train=True,
+                update_weights=False,
                 **self.kwargs
             )
 
@@ -166,7 +167,7 @@ class AccumulateSNR(Callback):
             total_snr += np.sum(np.abs(v))
             n_params += v.size
 
-        total_snr /= n_params
+        total_snr = total_snr / n_params
         return total_snr
 
 
