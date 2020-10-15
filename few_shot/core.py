@@ -85,29 +85,45 @@ class NShotTaskSampler(Sampler):
 
 
 class AccumulateSNR(Callback):
-    def __init__(self, n_batches=20):
+    def __init__(self,
+                 eval_fn: Callable,
+                 num_tasks: int,
+                 n_shot: int,
+                 k_way: int,
+                 q_queries: int,
+                 taskloader: torch.utils.data.DataLoader,
+                 prepare_batch: Callable,
+                 loss_fn: Callable,
+                 n_batches=20,
+                 **kwargs):
         super().__init__()
+        self.eval_fn = eval_fn
+        self.loss_fn = loss_fn
+        self.num_tasks = num_tasks
+        self.n_shot = n_shot
+        self.k_way = k_way
+        self.q_queries = q_queries
+        self.taskloader = taskloader
+        self.prepare_batch = prepare_batch
+        self.kwargs = kwargs
         self.n_batches = n_batches
 
     def on_train_begin(self, logs=None):
         self.first_moment = [{k: np.zeros(v.shape) for k, v in model.named_parameters()} for _, model in enumerate(self.model)]
         self.second_moment = [{k: np.zeros(v.shape) for k, v in model.named_parameters()} for _, model in enumerate(self.model)]
         self.count = 0
+        self.optimiser = self.params['optimiser']
 
     def on_epoch_begin(self, epoch, logs=None):
-        for first_moment in self.first_moment:
-            for key in first_moment.keys():
-                self.first_moment[key].fill(0)
-                self.second_moment[key].fill(0)
+        for fm, sm in zip(self.first_moment, self.second_moment):
+            for key in fm.keys():
+                fm[key].fill(0)
+                sm[key].fill(0)
         self.count = 0
 
     def on_epoch_end(self, epoch, logs=None):
         logs = logs or {}
         seen = 0
-
-        if isinstance(self.model, list):
-            per_model_stats = {f'loss_{i}': 0 for i in range(len(self.model))}
-            per_model_stats.update({self.metric_name + f"_{i}": 0 for i in range(len(self.model))})
 
         for batch_index, batch in enumerate(self.taskloader):
             if batch_index > self.n_batches:
@@ -124,7 +140,8 @@ class AccumulateSNR(Callback):
                 n_shot=self.n_shot,
                 k_way=self.k_way,
                 q_queries=self.q_queries,
-                train=False,
+                train=True,
+                update_weights=False,
                 **self.kwargs
             )
 
@@ -139,7 +156,6 @@ class AccumulateSNR(Callback):
         for i, snr in enumerate(snrs):
             logs[f'snr_{i}'] = snr
 
-
     def evaluate_model_snr(self, first_moment, second_moment, eps=1e-6):
         std = {k: np.sqrt(eps + second_moment[k] / self.count - (first_moment[k] / self.count) ** 2)
                for k in first_moment.keys()}
@@ -151,7 +167,7 @@ class AccumulateSNR(Callback):
             total_snr += np.sum(np.abs(v))
             n_params += v.size
 
-        total_snr /= n_params
+        total_snr = total_snr / n_params
         return total_snr
 
 
